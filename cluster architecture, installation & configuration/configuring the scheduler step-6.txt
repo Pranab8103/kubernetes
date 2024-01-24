@@ -1,0 +1,74 @@
+* A scheduler watches for newly created Pods that have no Node assigned.
+* For every Pod that the scheduler discovers, the scheduler becomes responsible for finding the best Node for that 
+Pod to run on.
+
+Factor for scheduling 
+---------------------
+* There are several factors which are taken into consideration before a pod is scheduled to a node.
+
+Some of these includes:
+* Resource requirements 
+* Hardware/Software policy constraints 
+* affinity & Anti-affinity
+* Data Locality
+
+1. Generate Certificates:
+-------------------------
+cd /root/certificates
+openssl genrsa -out kube-scheduler.key 2048
+openssl req -new -key kube-scheduler.key -subj "/CN=system:kube-scheduler" -out kube-scheduler.csr
+openssl x509 -req -in kube-scheduler.csr -CA ca.crt -CAkey ca.key -CAcreateserial  -out kube-scheduler.crt -days 1000
+
+Step 2: Generate Kubeconfig file:
+---------------------------------
+{
+  kubectl config set-cluster kubernetes-from-scratch \
+    --certificate-authority=ca.crt \
+    --embed-certs=true \
+    --server=https://127.0.0.1:6443 \
+    --kubeconfig=kube-scheduler.kubeconfig
+
+  kubectl config set-credentials system:kube-scheduler \
+    --client-certificate=kube-scheduler.crt \
+    --client-key=kube-scheduler.key \
+    --embed-certs=true \
+    --kubeconfig=kube-scheduler.kubeconfig
+
+  kubectl config set-context default \
+    --cluster=kubernetes-from-scratch \
+    --user=system:kube-scheduler \
+    --kubeconfig=kube-scheduler.kubeconfig
+
+  kubectl config use-context default --kubeconfig=kube-scheduler.kubeconfig
+}
+3: Copy the scheduler kubeconfig
+--------------------------------
+cp kube-scheduler.kubeconfig /var/lib/kubernetes/
+
+4: Configuring systemd service:
+------------------------------
+cat <<EOF | sudo tee /etc/systemd/system/kube-scheduler.service
+[Unit]
+Description=Kubernetes Scheduler
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-scheduler \\
+  --kubeconfig=/var/lib/kubernetes/kube-scheduler.kubeconfig \\
+  --authentication-kubeconfig=/var/lib/kubernetes/kube-scheduler.kubeconfig \\
+  --authorization-kubeconfig=/var/lib/kubernetes/kube-scheduler.kubeconfig \\
+  --bind-address=127.0.0.1 \\
+  --leader-elect=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+Step 5: Verification:
+---------------------
+cp /root/binaries/kubernetes/server/bin/kube-scheduler /usr/local/bin
+systemctl start kube-scheduler
+systemctl status kube-scheduler
+systemctl enable kube-scheduler

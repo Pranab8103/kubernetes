@@ -1,0 +1,34 @@
+Configuring the certificate authority
+-------------------------------------
+* It can happend that master node components can be all in separate servers
+* These multiple components which will be communicating with each other 
+* WHen communication is in plain-text, it is prone to a lot of attacks 
+* Hence it is important to have secure communication between multiple components 
+* This can be achieved with the help of certificates
+* Certificate Authority is an entity which issues digital certificates 
+* Key part is that both receiver and the sender trusts the CA 
+
+Step - 0. Create base directory were all the certificates and keys will be stored(master)
+---------------------------------------------------------------------------------
+mkdir /root/certificates
+cd /root/certificates
+
+Step - 1. Creating a private key for Certificate Authority(master)
+----------------------------------------------------------
+openssl genrsa -out ca.key 2048
+
+Step - 2. Creating CSR(master)
+----------------------
+openssl req -new -key ca.key -subj "/CN=KUBERNETES-CA" -out ca.csr
+
+Step - 3. Self-Sign the CSR(master)
+---------------------------
+openssl x509 -req -in ca.csr -signkey ca.key -CAcreateserial  -out ca.crt -days 1000
+
+Step - 4. See Contents of Certificate(master)
+-------------------------------------
+openssl x509 -in ca.crt -text -noout
+
+Step - 5. Remove CSR
+--------------------
+rm -f ca.csr

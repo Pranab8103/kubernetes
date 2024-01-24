@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: service-pod
+spec:
+    containers:
+    - name: promethium-pod
+      image: nginx
+    nodeSelector:
+      disk: hdd

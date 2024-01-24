@@ -1,0 +1,170 @@
+Challenges with files in container writable Layer
+------------------------------------------------- 
+* By default all files created inside container are stored on a writable container ayer. This means that:
+* The data doesn't persist when that container no longer exists, and it can be difficult to get the data of the 
+container if another process needs it.
+
+* Writing into a container's writable layer requires a storage driver to manage the filesystem. THe storage driver 
+provides a union filesystem, using the linux kernel
+
+* This extra abstraction reduces performance as compared to using data volumes, which write directly 
+to the host filesystem.
+
+Ideal Approach for persistent data
+----------------------------------
+* Docker has 2 options for container to store files in the hostmachine, so that the files are persisted even the 
+container stops: volumes and bind mounts.
+
+* If you are running Docker on linux you can also use a tmfs mount
+
+> docker volume ls
+
+> docker volume --help
+
+> docker volume create my volume 
+
+> docker container run -dt --name busybox -v myvolume:/etc busybox sh
+
+> docker container exec -it busybox sh
+    - cd etc 
+    - df -h
+
+* A given volume can be mounted into multiple containers simultaneously
+* When no running container is using a volume, the volume is still available to Docker and is not removed automatically
+* When you mount a volume, it may be named or anonymous. Anonymous volumes are not given an explicit name when they are 
+first mounted into a container, so Docker gives them a random name that is guaranteed to be unique awithin a given
+Docker host.
+
+Volumes in K8s
+--------------
+Two Challenges
+--------------
+* On-disk files in a container are ephemeral(when ever pod is crashed or application is not working as expected
+kubectl it will create a new pod and all data will be lost) 
+
+* When there are multiple containers who wants to share same data, it becomes a challenge
+
+* One of the benefits of kubernetes is that its supports multiple types of volumes
+    - EBS, cinder, glusterfs, local, nfs
+
+
+# pod-volume.yaml
+-----------------
+> kubectl apply -f pod-volume.yaml
+
+* Generally developers creates the  YAML files associated with pods that they want to deploy.
+* In a scenario of directly referencing to volumes, developer need to be aware of configuration
+
+* A persistent Volume(PV) is a peice of storage in the cluster that has been provisioned 
+by an administrator or dynamically provisioned using Storage Classes
+
+Different types of persistent volumes 
+-------------------------------------
+* Every volume which is created can be of different type.
+* This can be taken care by the storage administrator/ ops team
+
+Persistent volume claim
+-----------------------
+* A persistent volume claim is request for the storage by a user 
+* Within the claim, user need to specify the size of the volume with access mode 
+
+Developer:
+I want a volume of size 10 GB which is has a speed of Fast for my pod
+
+> mkdir /tmp/data
+
+> kubectl apply -f pv.yaml
+
+> kubectl get pv 
+
+> kubectl apply -f pvc.yaml
+
+#block pv has been claimed by default/pvc 
+> kubectl get pvc 
+
+> kubectl apply -f pod-pvc.yaml
+
+Static vs Dynamic provisioning
+------------------------------
+* kubectl are 2 ways PVs may be provisioned: statically or dynamically 
+
+Types of PV provisioning
+------------------------
+Static
+------
+* A cluster administrator creates a number of PVs
+
+Dynamic 
+-------
+When none of the static pvs which the administrator created matched a user persistentVolumeClaim, the 
+cluster may try to dynamically provision specially for the PVC.
+
+> kubectl apply -f dynamic-pvc.yaml
+
+ConfigMaps
+----------
+Sample Use-case
+---------------
+* We have AppA container and depending on the environment, its settings needs to be differed.
+
+Example Properties:
+-------------------
+Dev Environment: app.env=dev app.mem=2048m  app.Properties=dev.env.url
+Prod Environment: app.env=prod app.mem=8096m  app.Properties=prod.env.url
+
+* Even making change to mem different value would require the entire image to be built
+* This is not the best practice
+
+CLI syntax
+----------
+> kubectl create config [NAME][DATA-SOURCE]
+
+* file
+* directory 
+* literal value
+
+> kubectl get configmap
+
+> kubectl create configmap dev-config --from-literal=app.mem=2048 
+
+> kubectl create configmap dev-properties --from-file=dev.properties
+
+> kubectl get configmap dev-properties -o yaml 
+
+> kubectl apply -f pod-configmap.yaml
+
+> kubectl exec -it configmap-pod -- bash    
+    - cd /etc/config
+    - ls
+    - cat dev.properties
+
+Security Context
+----------------
+* WHen you run a container, it runs with the UID 0(Administrative privilege)
+* In-case pf container breakouts, attacker can get root privileges to your entire system
+
+* Running with least privilege user
+-----------------------------------
+We can run pod and container with limited user instead of ROOT user
+
+Storage Volume Expansion
+------------------------
+It can happen that your persistent volume has become full and you need to expand the storage for additional capacity.
+
+Step 1 - Enable the volume Expansion
+------------------------------------
+> kubectl get storageclass
+
+> kubectl get storageclass standard -o yaml
+
+# allowed volume expansion should be true
+
+> kubectl apply -f pod-pv.yaml
+
+> kubectl get pods
+
+> kubectl describe pod storage-pod
+Step 2 - Resizing the PVC
+-------------------------
+Step 3 - Restart the pods
+-------------------------

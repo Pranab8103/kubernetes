@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: promethium-deployment 
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      tier: frontend 
+  template:
+    metadata:
+      labels: 
+        tier: frontend
+    spec:
+      containers:
+      - name: nginx-container 
+        image: nginx 
+      tolerations:
+      #below 3 lines are acting as pass
+      - key: "key"
+        operator: "Exists"
+        effect: "NoSchedule"

@@ -1,0 +1,91 @@
+Troubleshooting application failure
+-----------------------------------
+* An application can make use of various objects like:
+- Pods, services, secrets, configmaps, roles, rolesbinding, network aspect evicted
+
+* If one of these intermediary things are not working, your application can behave unexpectedly 
+
+> kubectl apply -f application-failure.yaml
+
+> kubectl get service 
+
+> kubectl describe service promethium-service
+
+> kubectl get pods --namespace teama
+
+> kubectl describe pods nginx-pod-first --namespace teama
+
+#after adding run: nginx to both pod definitions in application-failure.yaml 
+> kubectl apply -f application-failure.yaml
+
+> kubectl describe pods nginx-pod-first --namespace teama
+
+# Still we will not see the endpoints being added to the service, because service is created 
+in default, and pods are created in different namespace
+> kubectl describe service promethium-service
+
+#edit the yaml file and create the service namespace in teama
+#shows the service in default namespace 
+> kubectl get service 
+
+> kubectl get service --namespace teama
+
+#now it will show the endpoints being added
+> kubectl describe service promethium-service --namespace teama
+
+Troubleshooting control plane 
+-----------------------------
+Step 1: Verify cluster components
+---------------------------------
+Verify if all the cluster level components are healthy 
+
+> kubectl get componentstatus
+
+Step 2: Verif and Dump Cluster Info
+-----------------------------------
+* Verify if the master and DNS servers are running 
+
+To get more details, run the cluster-info dump to dump lots of relevant info for debugging and diagnosis
+
+> kubectl cluster-info
+
+> kubectl cluster-info dump
+
+Step 3: Check Logs o Individual Components 
+------------------------------------------
+* Journalctl allows us to look into the logs for components deployed via systemd.
+
+> journalctl -l kube-apiserver 
+
+Supported version skew
+----------------------
+* kube-apiserver - In highly-available(HA) clusters, the newest and oldest kube-apiserver instances must 
+be within one minor version.
+
+* kubelet - kubelet must not be newer than kube-apiserver, and may be up to 2 minor versions older. 
+  Kube-apiserver is v1.15 
+  Supported kubelet version: 1.15, 1.14, 1.13 
+
+* kube-controller-manager - Must not be newer than the kube-apiserver 
+  kube-scheduler - Expected to match the kube-apiserver minor version 
+  cloud-controller-manager - Can be upto one minor version older (specially during upgrades)
+
+* kubectl - kubectl is supported within one minor version(older or newer) of kube-apiserver 
+  kube-apiserver is at 1.13
+  kubectl is supported at 1.14,1.13 and 1.12
+
+Draining worker nodes for maintenance activity 
+----------------------------------------------
+* To have more control over the upgrade process, we can also drain a node 
+* kubectl drain $NODENAME 
+* This will gracefully terminate all the pods on the node while marking the node as unschedulable 
+* For pods with a replica set, the pod will be replaced by a new pod which will be scheduled to a new node 
+* Static pods will be terminated 
+
+> kubectl get pods -o wide
+
+> kubectl get nodes 
+
+> kubectl drain minikube 
+
+> 

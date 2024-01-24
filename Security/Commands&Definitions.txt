@@ -1,0 +1,350 @@
+Authentication
+--------------
+* Authentication is the process or action of verifying the identity of a user or process
+
+* kubernetes has 2 category of users:
+    * Normal users
+    * Serice Accounts
+
+ * K8s does not have objects which represent normal user accounts
+
+ * K8s does not manage the users accounts natively
+
+ * here are multiple ways in which we can authenticate. Some of these include:
+    - Usernames/Passwords
+    - Client Certificates
+    - Bearer Tokens 
+    - etc...
+
+#unauthorized as 
+> Wget https://172.24.207.118:8443
+
+#create service account
+> kubectl create sa external
+
+> kubectl get sa
+
+#sa-pod.yaml
+------------
+> apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: external-pod
+  name: external-pod
+spec:
+  containers:
+  - image: nginx
+    name: external-pod
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+#create sa-pod.yaml
+> kubectl run external-pod --image=nginx --dry-run=client -o yaml
+
+#verify service account name
+> kubectl get pods -o yaml
+
+> kubectl exec -it external-pod -- bash
+    - ls -l /run/secrets/kubernetes.io/serviceaccount/
+    - cat /run/secrets/kubernetes.io/serviceaccount/token
+
+#token
+eyJhbGciOiJSUzI1NiIsImtpZCI6IlNmZ3czQnJ2a2ZMTUYwUGplYlJRbWxYUzA3M0lKclN3a3hCdDJocGRURG8ifQ.
+eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzI1Mzc
+5ODM2LCJpYXQiOjE2OTM4NDM4MzYsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmx
+vY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0IiwicG9kIjp7Im5hbWUiOiJleHRlcm5hbC
+1wb2QiLCJ1aWQiOiJlMjMxMmYyZC0yNzY0LTQ2ZDctOTg5MC0yNDU1NTdiZjg1MzAifSwic2VydmljZWFjY291bnQiO
+nsibmFtZSI6ImV4dGVybmFsIiwidWlkIjoiMzMyNmY4MWEtNGYyZS00ODY2LTk5MDctN2Y3ZWQxNjU5MzE3In0sIndh
+cm5hZnRlciI6MTY5Mzg0NzQ0M30sIm5iZiI6MTY5Mzg0MzgzNiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRl
+mF1bHQ6ZXh0ZXJuYWwifQ.G438legYV-BpvAKsUMF9xUpc8TSkuFZSr4uohkZPhGxMOSGH4YaLJpZeaKmV2Qq3e5yVWwxB
+8lhzp1_6AmC6xUUQY6urR5XKP6cAcMegGIjDykUncFpczR2YKqXWApoe-ErQcqVYbbd8G_fDCcOO2nL2BIhz0vLQ2HrrXL
+zz7swA2KGqG2mTNEc2q6XQ2Xt0VLe3lpykRIADz2I-Frs9bOHyaO-LEAQRO67x4RaDyN9a5ZL42ep1VhoSSWGujYZZfEv
+jgn9pvHNAOT9g2dsDQqeo17OI4eWhCgutqivkr8Iref06b_I41ssya88Yhpp4nJq4YvF8BbVwlcIBBB80sA
+
+> curl -k https://172.24.207.118:8443/api/v1 --header "Wget https://172.24.207.118:8443 eyJhbGciOiJSUzI1NiIsImtpZCI6IlNmZ3czQnJ2a2ZMTUYwUGplYlJRbWxYUzA3M0lKclN3a3hCdDJocGRURG8ifQ.
+eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzI1Mzc
+5ODM2LCJpYXQiOjE2OTM4NDM4MzYsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmx
+vY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0IiwicG9kIjp7Im5hbWUiOiJleHRlcm5hbC
+1wb2QiLCJ1aWQiOiJlMjMxMmYyZC0yNzY0LTQ2ZDctOTg5MC0yNDU1NTdiZjg1MzAifSwic2VydmljZWFjY291bnQiO
+nsibmFtZSI6ImV4dGVybmFsIiwidWlkIjoiMzMyNmY4MWEtNGYyZS00ODY2LTk5MDctN2Y3ZWQxNjU5MzE3In0sIndh
+cm5hZnRlciI6MTY5Mzg0NzQ0M30sIm5iZiI6MTY5Mzg0MzgzNiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRl
+mF1bHQ6ZXh0ZXJuYWwifQ.G438legYV-BpvAKsUMF9xUpc8TSkuFZSr4uohkZPhGxMOSGH4YaLJpZeaKmV2Qq3e5yVWwxB
+8lhzp1_6AmC6xUUQY6urR5XKP6cAcMegGIjDykUncFpczR2YKqXWApoe-ErQcqVYbbd8G_fDCcOO2nL2BIhz0vLQ2HrrXL
+zz7swA2KGqG2mTNEc2q6XQ2Xt0VLe3lpykRIADz2I-Frs9bOHyaO-LEAQRO67x4RaDyN9a5ZL42ep1VhoSSWGujYZZfEv
+jgn9pvHNAOT9g2dsDQqeo17OI4eWhCgutqivkr8Iref06b_I41ssya88Yhpp4nJq4YvF8BbVwlcIBBB80sA"
+
+Authorization
+-------------
+* Authorization is the process of giving someone permission to perform some operations
+* K8s provides multiple authorization modules like:
+    - AlwaysAllow
+    - AlwaysDeny
+    - Attribute-Based Access Control(ABAC)
+    - Role-Based access control(RBAC)
+    - Node 
+    - Webhook
+  
+RBAC
+----
+* A role contains rules that represent a set of permissions
+* A role binding grants the permissions defined in a role to a user or set of users
+* A role can only be used to grant access to resources within a single namespace
+
+role.yaml
+---------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods"]
+  verbs: ["list"]
+
+> kubectl apply -f role.yaml
+
+> kubectl get role
+
+#check what the role does
+> kubectl describe role pod-
+
+role-binding.yaml
+-----------------
+apiVersion: rbac.authorization.k8s.io/v1
+# This role binding allows "jane" to read pods in the "default" namespace.
+# You need to already have a Role named "pod-reader" in that namespace.
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: default
+subjects:
+# You can specify more than one "subject"
+- kind: User
+  #replace the user name here 
+  name: jane # "name" is case sensitive
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # "roleRef" specifies the binding to a Role / ClusterRole
+  kind: Role #this must be Role or ClusterRole
+  name: pod-reader # this must match the name of the Role or ClusterRole you wish to bind to
+  apiGroup: rbac.authorization.k8s.io
+
+#defines what role is associated and to which user is attached to  
+> kubectl describe rolebinding read-pods 
+
+ClusterRole and ClusterBindings
+-------------------------------
+* A role can only be used to grant access to resources within a single namespace
+* A ClusterRole can be used to grant the same permissions as a Role, but because they are cluster-scoped, they
+can be used to grant access to:
+  - cluster-scoped resources(like nodes)
+  - namespaced resources(like pods) across all namespaces
+
+Cluster-role.yaml
+-----------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # "namespace" omitted since ClusterRoles are not namespaced
+  name: pod-reader
+rules:
+- apiGroups: [""]
+  #
+  # at the HTTP level, the name of the resource for accessing Secret
+  # objects is "secrets"
+  resources: ["pods"]
+  verbs: ["list"]
+
+> kubectl apply -f cluster-role.yaml
+
+> kubectl get clusterrole
+
+> kubectl describe clusterrole pod-reader
+
+> kubectl apply -f cluster-role-binding.yaml 
+
+> kubectl describe clusterrolebinding list-pods-global
+
+* A RoleBinding may also reference ClusterRole to grant the permissions to resources defined in the ClusterRole 
+within the RoleBinding namespace 
+
+* This allows administrator to have set of central policy which can be attached via RoleBinding so it is applicable
+at a per-namespace level 
+
+Asymmetric key 
+--------------
+* Asymmetric cryptography, uses public and private keys to encrypt and ecrypt data 
+* One key in the pair can be shared with everyone; it is called the public key. The other key in the pair is kept 
+secret; it is called private key.
+* Either of the keys can be used to encrypt a message; the opposite key from the one ised to encrypt the message is 
+used for decryption
+
+Overview of hTTPS 
+-----------------
+* HTTPS is an extension of HTTP
+* In HTTPS, the communication is encryption using Transport Layer Security(TLS)
+* The protocol is therefore also often referred over TLS or HTTP over SSL
+
+Scenario 1: MITM Attacks
+------------------------
+* User is sending their username and password in plaintext to a web server for authentication over a network 
+* There is an attacker sitting between them doing a MITM attack and storing all the credentials he finds over 
+the network to a file.
+
+Scenario 2: MITM & Integrity Attacks 
+------------------------------------
+* Attacker changing payment details while packets are in transit 
+
+eg: send $100 to promethium@gmail.com can be changed to attacker@eg.internl by the attacker 
+
+* to avoind the previous Scenario, various cryptographic standards were clubbed together to establish
+a secure communication over an untrusted network and they were known as SSL/TLS
+
+* Every website has a certificate(like a passport which is issued by a trueted entity)
+
+* Certificate has lot of details like domain name it is valid for, the public key, validity and others
+
+* Generally when you open a https website, it will send you its certificate
+
+* Browser(clients )verify if it trusts the certificate issuer
+
+* It will verify all the details of the Certificate
+
+* It will take the public key and initiate a negotiation
+
+* Assymetric key encryption is used to generate a new temporary symmetric key which will be used for secure 
+communication
+
+Certificate based Authentication
+--------------------------------
+* Our goal is to setup authentication based on X509 Client certificate
+* User A should be able to authenticate with Kubernetes Cluster with his Certificates
+
+Understanding kubeconfig
+------------------------
+* kubectl command uses kubeconfig files to find the information about the cluster, username, authentication mechanisms and 
+others.
+
+* kubeconfig file can also have details associated with multiple kubernetes clusters.
+
+Step 1: Understanding Clusters Field 
+------------------------------------
+* Cluster field has details related to the URL of your Kubernetes Cluster and its associated information.
+
+Step 2: Users Field
+-------------------
+* User field contains authentication specific information like username, passwords.
+* There can be different type of authentication mechanisms(user/pass, certificates, tokens etc)
+
+Step 3: Context field
+---------------------
+* Context groups information related to cluster, user and namespace.
+
+> kubectl config view
+
+> kubectl create namespace promethiumns
+
+#In order to get the resources associated to the namespace promethiumns, we will have to type --namespace promethiumns
+everytime. In that case, we can hardcode the promethiumns namespace in the kubeconfig file 
+> kubectl get pods --namespace promethiumns
+
+* open the config file and change the current-context to promethiumns
+
+Creating kubeconfig file from scratch
+-------------------------------------
+1. Add cluster details
+----------------------
+#craetes a kubeconfig called as base-config and it has set cluster specific information 
+> kubectl config --kubeconfig=base-config set-cluster development --server=https://1.2.3.4
+
+2. Add user details
+-------------------
+> kubectl config --kubeconfig=base-config set-credentials experimenter --user=dev --password=some-password
+
+3. Setting contexts
+-------------------
+> kubectl config --kubeconfig=base-config set-context dev-frontend --cluster=development --namespace=frontend --user=experimenter
+
+4. Repeats above steps for second cluster 
+----------------------------------------- 
+> kubectl config --kubeconfig=base-config set-cluster production --server=https://4.5.6.7
+
+> kubectl config --kubeconfig=base-config set-context prod-frontend --cluster=production --namespace=frontend --user=experimenter
+
+> kubectl config --kubectlconfig=base-config view
+
+> kubectl config --kubeconfig=base-config get-contexts
+
+> kubectl config --kubeconfig=base-config use-context dev-frontend
+
+Kubernetes secrets
+------------------
+Use-case
+--------
+* AppA runs on a pod and it needs to connect to a MYSQL db to start working properly 
+* Many a times you will find that developer have hardcoded credentials within their container image.
+
+There are multiple riks of hard coding credentials:
+- Anyone having access to teh container repository can easily fetch the credentials
+- Developer needs to have credentials of production systems.
+- Update of crendetials will lead to new docker mage being built
+
+Solutions: Store credentials centrally
+--------------------------------------
+A Secret is an object that contains a small amount of sensitive data such as a password, a token, or a key 
+- Allows customers to store secrets centrally to reduce risk of exposure.
+- Stored in etcd database
+
+Syntax
+------
+kubectl create secret [TYPE][NAME][DATA]
+
+Elaborating Type:
+-----------------
+* Generic:
+----------
+  1. File (--from-file)
+  2. directory 
+  3. literal value 
+
+* Docker Registry
+* TLS
+
+> kubectl create secret generic firstsecret --from-literal=dbpass=mypassword123
+
+> kubectl get secret
+
+> kubect describe secret firstsecret
+
+> kubectl get secret firstsecret -o yaml
+
+#create secret from file
+> kubectl create secret generic secondsecret --from-file=./credentials.txt
+
+#Give base64 encoded version of username and password 
+> kubectl apply -f secret-data.yaml
+
+Mounting secrets inside pods
+----------------------------
+* Once secret is created it is necessary to make it available to containers in a pod 
+* There are 2 approaches to achieve this: 
+  - Volumes 
+  - Environment Variables
+
+Volumes 
+-------
+> kubectl apply -f secret-mount.yaml
+
+> kubectl exec -it secretmount -- bash 
+    - cd /etc/foo 
+    - ls 
+    - cat dbpass
+
+Environment Variables
+---------------------
+> kubectl apply -f environment-var.yaml

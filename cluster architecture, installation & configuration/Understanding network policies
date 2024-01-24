@@ -1,0 +1,144 @@
+* By default, pods are non-isolated; they accept traffic from any source 
+* A network policy is a specification of how groups of pods are allowed to communicate with each other 
+and other network endpoints 
+* Example: POD 1 should not have any internal or external comminucation with POD 2 and POD 3
+
+Default Deny - Ingress 
+----------------------
+* This will block all the inbound traffic to the pods in the namespace 
+* Egress traffic will still be allowed to pass
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata:
+    name: default-deny-ingress 
+spec:
+    podSelector: {}
+    policyTypes:
+    - Ingress
+
+* Since all ingress is blocked, following things will happen:
+    - New incoming connection to the PODS would not be allowed .
+    - PODS would be allowed to communicate externally and return traffic will be allowed.
+
+Practical 
+---------
+> Kubectl create ns external 
+
+> kubectl run pod-1 --image=praqma/network-multitool
+
+> kubectl run pod-2 --image=praqma/network-multitool
+
+#create in namespace of external
+> kubectl run pod-3 --image=praqma/network-multitool -n external 
+
+#check any network policies
+> kubectl get netpol
+
+> kubectl get pods -o wide 
+
+> kubectl get pods -o wide -n external
+
+Basic Test-Case:
+----------------
+> kubectl exec -it pod-1 --ping [pod2-ip]
+
+Rule 1: Deny Ingress 
+--------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata:
+  name: default-deny-ingress 
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+> kubectl get netpol
+
+> kubectl exec -it pod-1 -- ping 192.168.137.70
+
+Default Deny - Egress
+---------------------
+* This will block all the outbound traffic to the pods 
+* Ingress traffic will still be allowed 
+* Since all egress is blocked, following things will happen: 
+    - outgoing connections from the POD will not be allowed 
+    - Incoming Connections will be allowed
+
+Rule - Deny Egress 
+------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata:
+  name: default-deny-egress 
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+
+pod selector
+------------
+* Allows us to group the pods to which the policy should apply
+* All Ingress and Egress traffic for POD 1 should be blocked
+
+podselector yaml
+---------------- 
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata:
+  name: deny-ingress-egress 
+spec:
+  podSelector: 
+    matchLabels:
+      role: suspicious 
+  policyTypes:
+  - Egress
+  - Ingress
+
+pod selector ip address yaml
+----------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata:
+  name: deny-ingress-egress 
+spec:
+  podSelector: 
+    matchLabels:
+      role: secure 
+  ingress:
+  - from:
+     - ipBlock:
+        cidr: 192.168.0.0/16
+        except:
+        - 192.168.137.70/32
+  policyTypes: 
+  - Ingress
+
+Egress - To Selector
+--------------------
+* Allows outgoing connections only to certain set of network
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy 
+metadata:
+  name: deny-ingress-egress 
+spec:
+  podSelector: 
+    matchLabels:
+      role: secure 
+  egress:
+  - from:
+     - ipBlock:
+        cidr: 192.168.0.0/16
+        except:
+        - 192.168.137.70/32
+  policyTypes: 
+  - Egress
+
+Namespace selector
+------------------
+* Allow connections based on namespace 
+Example:
+
+Allow ingress connections to FTP POD from namespace app with pods labeled reconcile

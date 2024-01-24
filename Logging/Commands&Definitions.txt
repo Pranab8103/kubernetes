@@ -1,0 +1,81 @@
+Overview of k8s events
+----------------------
+* Kubernetes events are created when other resources have state changes, error, or 
+other messages that should be broadcast tp the system.
+
+* It provides insights into what is happening inside a cluster, such as what decisions were made by 
+scheduler or why some pods were evicted from node.
+
+> kubectl run event-pod --image=nginx 
+
+> kubectl get events 
+
+* Events are namespaced
+
+* Hence if you want event of a pod in "promethium-namespace" then you will have to explicitly specify the 
+--namespace promethium-namespace.
+
+* To see events from all namespaces, you can use the --all-namespaces argument
+
+> kubectl get events -n default
+
+Field selector
+--------------
+* Field selectors let you select kubernetes resources based on the value of one or more resource fields
+
+> kubectl get pods --all-namespaces
+
+#list all the pods not in default namespace
+> kubectl get pods --all-namespaces --field-selector metadata.namespace!=default 
+
+> kubectl create deployment test-deployment --replicas=3 --image=nginx
+
+> kubectl get events -o json
+
+> kubectl get events --field-selector involvedObject.name=test-deployment
+
+Monitor Cluster Components
+-------------------------- 
+* One of the important functionalities of a kubelet is to retrieve metrics aggregate and expose them 
+through the kubelet summary API 
+
+* This is achived with cAdvisor.
+
+> kubectl top pods
+
+Overview about kube-state-metrics
+---------------------------------
+* kube-state-metrics is a simple service that listens to the k8s API server and generates 
+metrics about the state of the objects.
+
+* It is not focused on the health of the individual k8s components, but rather on the health of the varius 
+objects inside, such as deployments, nodes and pods.
+
+Deploying metric server
+-----------------------
+> kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/high-availability.yaml
+
+> kubectl top pods
+
+> kubectl top nodes
+
+Understanding Docker Logging Drivers
+------------------------------------
+* There are a lot of logging driver options available in Docker, some of these include:
+json-file, none, syslog, local journald, splkunk awslogs
+
+* The docker logs command is not available for drivers other than json-file and journald 
+
+> kubectl apply -f pod-logging.yaml
+
+> kubectl logs pod01
+
+> kubectl apply -f multi-container-pod-logging.yaml
+
+> kubectl logs pod02 ping-container
+
+> kubectl logs pod02 ping-container-ip
+
+Cluster component logs
+----------------------
+* 

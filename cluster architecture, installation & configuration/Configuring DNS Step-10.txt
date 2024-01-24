@@ -1,0 +1,21 @@
+Step 1: Verify the status of DNS
+--------------------------------
+kubectl cluster-info
+
+Step 2: Create a BusyBox POD to test DNS
+----------------------------------------
+kubectl run busybox --image=busybox:1.28 --command -- sleep 3600
+kubectl exec -it busybox -- sh
+nslookup google.com
+ping 8.8.8.8
+
+Step 3: Install CoreDNS:
+------------------------
+wget https://raw.githubusercontent.com/zealvora/certified-kubernetes-administrator/master/Domain%206%20-%20Cluster%20Architecture%2C%20Installation%20%26%20Configuration/coredns.yaml
+kubectl apply -f coredns.yaml
+
+Step 4: Verify if DNS Resolution Works:
+---------------------------------------
+kubectl get pods -n kube-system
+kubectl exec -it busybox -- sh
+nslookup google.com

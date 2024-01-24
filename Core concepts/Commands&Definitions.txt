@@ -1,0 +1,388 @@
+* Container orchestration is all about managing the life cycles of containers, expecially in large, dynamic
+environments.
+
+* Container Orchestration can be used to perform lot of tasks, some of them includes:
+    - Provisioning and deployment of containers
+    - Scaling up or removing containers to spread application load evenly
+    - Movement of containers from one host to another if there is shortage of resources
+    - Load balancing of service discovery between containers 
+    - Health monitoring containers and hosts
+
+Requirement: Minimum of 2 web-server should be running all the time
+
+There are many container orchestration solutions which are available, some of the popular ones include:
+    - Docker Swarm 
+    - Kubernetes 
+    - Apache Mesos
+    - Elastic Container Service(AWS ECS)
+
+* There are also various container orchestration platforms available like EKS.
+
+Kubernetes 
+----------
+* Kubernetes(k8s) is an open-source container orchestration engine developed by google.
+
+* It was originally designed by Google, and is now maintained by the Cloud Native Computing Foundation.
+
+> kubectl run nginx --image=nginx
+
+> kubectl get pods
+
+Overview of kubectl 
+-------------------
+* The kubernetes command-line tool, kubectl, allows you to run commands against Kubernetes clusters.
+
+* You can use kubectl to  deploy applications, inspect and manage cluster resources and view logs.
+
+* To connect tp the kubernetes master, there are two important data which kubectl needs:
+    - DNS/IP of the cluster
+    - Authentication Credentials 
+
+Understanding PODs
+------------------
+* A Pod in kubernetes represents a group of one or more application containers, and some shared resources from
+those containers.
+
+* A Pod always runs on a Node
+
+* A Node is a worker machine in Kubernetes
+
+* Each Node is managed by the Master
+
+* A Node can have multiple pods
+
+#create pod 
+> kubectl run mywebserver --image=nginx
+
+#Exec into containers
+> kubectl exec -it mywebserver -- bash
+
+# ls -l will run inside your kubernetes pod 
+> kubectl exec -it mywebserver -- ls -l 
+
+> kubectl delete pod mywebserver
+
+#Overview of Kubernetes Objects
+-------------------------------
+* Kubernetes Objects is basically a record of intent that you pass on the Kubernetes cluster.
+* Once you create the object, the kubernetes system will constantly work to ensure that object exists.
+
+There are various ways in which we can configure a Kubernetes Objects.
+    - First approach is through the kubectl commands
+    - Second approach is through configuration file written in YAML
+
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: mywebserver
+spec:
+  containers:
+  - name: mywebserver
+    image: nginx
+
+> kubectl apply -f pod.yaml 
+
+Kubernetes architecture
+-----------------------
+Master node components 
+----------------------
+ETCD
+----
+Key value store used by kubernetes to store all the cluster data. 
+
+kube-API server
+-----------------
+Component on the master node that exposes the Kubernetes API. This is the api-server where worker node will
+be communicating with.Whenever we run kubectl get nodes, kubectl get pods all of those commands first reach
+the API-server. This is like a gateway or entry point for entire kubernetes cluster. kubelet, kube-proxy all of
+these communicates with the kube-api server.
+
+Kube-scheduler 
+--------------
+Component on the master that watches newly create pods that have no nodes assigned, and selects a node for them
+to run on.
+
+Kube-Controller-Manager
+-----------------------
+* Responsible for controlling aspects, including:
+
+* Node Controllers: Responsible when node goes down. Replication cotrollers, endpoint controllers, Service account
+& Token controllers.
+
+Cloud-Controller-Manager
+------------------------
+Runs controllers that interact with underlying cloud providers.
+
+Worker Node components
+----------------------
+kubelet
+-------
+An agent that runs on each node in the cluster. It makes sure that containers are running in relevant pods.
+
+kube-proxy
+----------
+Acts as a network proxy which maintains network rules on the host and performing connection forwarding. It might
+happen that various container might want to communicate with each other.
+
+Container Runtime
+-----------------
+Software which is responsible for running containers. Supported Runtimes: Docker, container, rklet and others.
+
+Central Configuration Storage
+-----------------------------
+* In a Linux environment, all the configurations are stored in the /etc directory.
+
+* etcd is inspired from that and there is an addition of d which is for distributed.
+
+
+Understanding the etcd
+-----------------------
+* etcd is a distributed keey-value store.
+
+* etcd reliably stores the configuration data of the kubernetes cluster, representing the state of the 
+cluster(what node exist in the cluster, what pods should be running, which node they are running on, and
+a whole lot more) at any given point of time.
+
+eg: lets say your kubernetes master has 100 worker nodes. The first worker node has 10 pods, second worker 
+node has 20 pods so on.... where exactly all those data will be retrieved from. Its ETCD
+
+****Important pointers*****
+---------------------------
+* A kubernetes cluster stores all its data in etcd
+
+* Anything that you read while running kubectl get pods is stored in etcd
+
+* Any node crashing or process dying causes values in etcd to be changed
+
+* Whenever you create something with kubectl create / kubectl run will create an entry in the etcd
+
+Understanding the API server
+----------------------------
+* API server acts as a gateway to the Kubernetes cluster
+
+* When you interact with your kubernetes cluster using the kubectl command-line interface, you are actually
+communicating with the master API server component 
+
+eg: no one can communicate with the etcd database directly. It has to go through the kube-apiserver in order
+to write something in that db except for the kube-apiserver.
+
+* The API server is the only kubernetes component that connects to etcd; all the other components must go through
+the API Server to work with the cluster state.
+
+* The API Server is also responsible for the Authentication and authorization mechanism. All API clients should be 
+authenticated in order to interact with API Server.
+
+Steps of how kubenetes works:
+-----------------------------
+1. kubectl writes to the API server(kubectl run mywebserver --image=nginx)
+
+2. API server will Authenticate and authorizate. Upon validation, it will write it to etcd.
+
+3. Upon write to etcd, API   will invoke the scheduler.
+
+4. Scheduler decides which node the pod should run and return data to API server. API will in-turn write 
+it back to etcd.
+
+5. API Server will invoke the kubelet in the node decided by the scheduler.
+
+6. kubelet communicates to the docker daemon via Docker socket to create the container.
+
+7. kubelet will update the status of the POD back to the API server.
+
+8. API Server will write the status details back to etcd.
+
+API 
+---
+* It is generally used for intercommunication-between multiple softwares.
+* WIth the API, the exact structure of request and response is documented upfront and is 
+likely to remain same throughout the time.
+
+Important fields in YAML file
+-----------------------------
+* apiVersion: Version of API
+* kind: Kind of object you want to create 
+* metadata name: Name of object that uniquely identifies in a given namespace 
+* spec: Desired state of the object 
+
+> kubectl explain pods
+
+> kubectl apply -f pod.yaml
+
+> kubectl delete -f pod.yaml
+
+Working with multi-container pods
+---------------------------------
+* Containers within a pod share a same IP address and port space, and can find each other via localhost.
+
+YAML file
+---------
+
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: nginxwebserver
+spec:
+  containers:
+  - name: container1
+    image: nginx
+  - name: container2
+    image:  busybox
+    command: 
+      - sleep
+      - "3600"
+
+> kubectl apply -f multi-container-pod.yaml
+
+> kubectl get pods
+
+> kubectl describe pod nginxwebserver
+
+> kubectl exec -it nginxwebserver -- bash
+    - apt-get update && apt-get install net-tools
+    - netstat -ntlp
+    - ifconfig
+
+> kubectl exec -it nginxwebserver -c container2 -- sh
+    - netstat -ntlp
+    - wget 127.0.0.1:80
+    - ifconfig 
+
+Understanding kube-scheduler
+----------------------------
+* Kube-scheduler watches for newly create pods that have no node assigned, and selects a node for them to run on.
+
+* kube-apiServer talks to the kube-scheduler to ask for a node for a container to run on. kube-scheduler gives the 
+node to kube-apiServer and kube-apiServer then tells the kubelet of the node to run a container 
+
+* There are sevaral factos which are taken into consideration before a pod is scheduled to a node.
+Some of these include:
+    - Resource Requirements
+    - Hardware/Software policy constraints
+    - Affinity & Anti-Affinity
+    - Data Locality
+
+CMD & ENTRYPOINT(Image command and image entrypoint)
+----------------------------------------------------
+Overview of ENTRYPOINT:
+-----------------------
+* The best use for ENTRYPOINT is to set the imae's main command
+* ENTRYPOINT doesnot allow you to override the command 
+* It is important to Understand the distinction between CMD and ENTRYPOINT.
+
+Dockerfile
+----------
+FROM busybox
+CMD ["sh"]
+
+* here the "sh" will run as first command.
+But if we run docker container run -dt --name base01 base01 ping -c 10 google.com, sh will be overrided
+and ping will get executed during runtime.
+
+Dockerfile
+----------
+FROM busybox
+ENTRYPOINT ["/bin/ping"]
+
+Now if we run docker container run -dt --name base02 sh, what docker will do is ot will append /bin/ping sh at 
+the front. /bin/ping cannot be overridden.
+
+docker container run -dt --name base02 ping -c 10 google.com will be /bin/ping ping -c 10 google.com
+
+Description             Docker Field Name       Kubernetes Field name
+-----------             -----------------       ---------------------
+Command that will       ENTRYPOINT              command 
+be run by container 
+
+Argument passed to      CMD                     args                 
+the container 
+
+command.yaml
+------------
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: command1
+spec:
+  containers:
+  - name: count 
+    image: busybox 
+    command: ["sleep","3600"]
+    # command: ["sleep"]
+    # args: ["3600"]
+
+> kubectl apply -f command.yaml
+
+> kubectl get pods
+
+Use-Case1: Image Entrypoint and CMD
+-----------------------------------
+WHen there is an entry point and CMD set for a Docker image and if we are not manually overriding it 
+at k8s manifest level, the final decision is to use the default image specifications.
+
+Image Entrypoint        Image Command   Container Command       Container Argument      final
+----------------        ------------    -----------------       ------------------      -----
+sleep                   3600               <not set>            <not set>               sleep 3600
+
+Image Entrypoint        Image Command   Container Command       Container Argument      final
+----------------        ------------    -----------------       ------------------      -----
+sleep                   3600            ping -c5 google.com    <not set>                ping -c5 google.com
+
+Image Entrypoint        Image Command   Container Command       Container Argument      final
+----------------        ------------    -----------------       ------------------      -----
+sleep                   3600             <not set>              5000                    sleep 5000
+
+Image Entrypoint        Image Command   Container Command       Container Argument      final
+----------------        ------------    -----------------       ------------------      -----
+sleep                   3600             ping                   yahoo.com               ping yahoo.com
+
+Documentation of K8s resources
+------------------------------
+> kubectl explain pod
+
+> kubectl explain pod.spec
+
+Dockerfile - EXPOSE
+-------------------
+* The EXPOSE instruction informs DOcker that the container listens on the specified network ports at runtime 
+
+* The EXPOSE instruction doesnot actually publish the port
+
+* It functions as a type of Documentation between the person who builds the image and the person who runs the container,
+about which ports are intended to be published.
+
+Exposing Ports for PODS
+-----------------------
+* Same as EXPOSE command in Dockerfile 
+
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: nginx-pod
+spec:
+  containers:
+  - name: demoportcontainer
+    image: nginx
+    ports:
+      - containerPort: 8080
+
+> kubectl apply -f pod-expose-port.yaml
+
+> kubectl describe pod nginx-pod
+
+> kubectl explain pod.spec.containers
+
+Generating POD manifest via CLI 
+-------------------------------
+#create a pod from nginx image 
+> kubectl run mynginx --image=nginx 
+
+#create a Pod and Expose a Port 
+> kubectl run mynginx --image=nginx --port=80 
+
+#Output the manifest File
+> kubectl run nginx --image=nginx --port=80 --dry-run=client -o yaml  
+
+#Delete pods
+> kubectl delete pod nginx 
+
+> kubectl delete pod --all 

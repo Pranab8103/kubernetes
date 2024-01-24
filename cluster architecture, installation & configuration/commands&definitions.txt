@@ -1,0 +1,25 @@
+Overview of kubeadm
+-------------------
+* kubeadm allows us to quickly provision a secure kubernetes cluster
+
+Creating infrastructure for k8s from scratch
+--------------------------------------------
+Common pattern 1 - certificates
+-------------------------------
+* Generating a set of certificates and keys for each component as part of the cluster for secure communication
+
+Common pattern 2 - Kubeconfig
+-----------------------------
+* Multiple component needs to interact with api server 
+* For this, we will have to create kubeconfig file for individual component
+
+Common pattern 3 - configuration for components
+-----------------------------------------------
+* Each component of a cluster will have a unique set of configuration options that controls the functionality
+
+Common pattern 4 - Systemd File 
+-------------------------------
+* We will also create a systemd unit configuration file thta encodes information about a process controlled and 
+supervised by systemd
+
+Systemd also can ensure to start the component automatically when system reboots

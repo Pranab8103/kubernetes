@@ -1,0 +1,784 @@
+Overview of Labels & Selectors
+------------------------------
+* Labels are key-value pairs that are attached to objects, such as pods.
+* Labels are assigned to pods to make it more easier to distinguish between other pods and to be filtered 
+using selectors
+
+There can be multiple objects within a Kubernetes cluster.
+
+Some of the objects are as followws:
+    - Pods 
+    - Services 
+    - Secrets
+    - Namespaces
+    - Deployments
+    - Daemonsets
+
+> kubectl get pods -l env=prod
+
+> kubectl get pods -l env=prod
+
+Implmenting labels and selectors
+--------------------------------
+> kubectl run pod-1 --image=nginx 
+
+> kubectl run pod-2 --image=nginx 
+
+> kubectl run pod-3 --image=nginx 
+
+Labels
+------
+> kubectl get pods --show-labels
+
+> kubectl label pod pod-1 env=dev
+
+> kubectl label pod pod-2 env=stage
+
+> kubectl label pod pod-3 env=prod
+
+Selectors(Search for an object based on a specific object) 
+----------------------------------------------------------
+> kubectl get pods -l env=dev
+
+> kubectl get pods -l env=prod 
+
+> kubectl get pods -l env!=prod 
+
+> kubectl label --help
+
+Examples:
+  # Update pod 'foo' with the label 'unhealthy' and the value 'true'
+  kubectl label pods foo unhealthy=true
+
+  # Update pod 'foo' with the label 'status' and the value 'unhealthy', overwriting any existing value
+  kubectl label --overwrite pods foo status=unhealthy
+
+  # Update all pods in the namespace
+  kubectl label pods --all status=unhealthy
+
+  # Update a pod identified by the type and name in "pod.json"
+  kubectl label -f pod.json status=unhealthy
+
+  # Update pod 'foo' only if the resource is unchanged from version 1
+  kubectl label pods foo status=unhealthy --resource-version=1
+
+  # Update pod 'foo' by removing a label named 'bar' if it exists
+  # Does not require the --overwrite flag
+  kubectl label pods foo bar-
+
+
+> kubectl run nginx --image=nginx --dry-run=client -o yaml > label-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+    env: dev
+    duration: 2Weeks
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+> kubectl apply -f label-pod.yaml 
+
+Overview of replica set 
+-----------------------
+> A ReplicaSet purpose is to maintain a stable set of replica Pods running at any given time.
+
+Desired State: The state of pods which is desired.
+Current State: The actual state of pods which are running 
+
+> kubectl get replicaset 
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: promethium-replicaset
+spec:
+  # modify replicas according to your case
+  replicas: 5
+  selector:
+    matchLabels:
+      tier: frontend  
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: php-redis
+        image: gcr.io/google_samples/gb-frontend:v3
+
+> kubectl apply -f replicaset.yaml
+
+> kubectl delete pod promethium-replicaset-djdvj
+
+> kubectl get pod --show-labels
+
+> kubectl get rs
+
+> kubectl delete replicaset promethium-replicaset
+
+Understanding Deployments
+-------------------------
+* Deployments provides replication functionality with the help of ReplicaSets, along with various
+additional capability like rolling out changes, roolback changes if required.
+
+Important pointers
+------------------
+* Deployment ensures that only a certain number of Pods are down while they are being updated.
+
+* By default, it ensures that atleast 25% of the desired number of Pods are up(25% max unavailable)
+
+* Deployments keep the history of revision which had been made. 
+
+Benefits of Deployments - Rollout changes 
+-----------------------------------------
+* We can easily rollout new updates to our application using deployments.
+
+* Deployments will perform update in rollout manner to ensure that your app is not down.
+
+* Sometimes, you may want to rollback a Deployments; for example, when the Deployment is not stable, such
+as crash looping
+
+> kubectl get deployments       
+
+#deployments.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promethium-deployment
+spec:
+  # modify replicas according to your case
+  replicas: 5
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: php-redis
+        image: gcr.io/google_samples/gb-frontend:v3
+
+> kubectl apply -f deployments.yaml
+
+> kubectl get replicaset
+
+Rollout changes history
+-----------------------
+> kubectl rollout history deployment.v1.apps/promethium-deployment
+
+> kubectl describe deployments promethium-deployment
+
+#for more detailed history
+> kubectl rollout history deployment.v1.apps/promethium-deployment --revision 1
+
+> kubectl rollout history deployment.v1.apps/promethium-deployment --revision 2
+
+Rolling back deployments
+------------------------
+> kubectl rollout undo deployment.v1.apps/promethium-deployment --to-revision=1
+
+> kubectl describe deployments promethium-deployment
+
+Create deployments via CLI
+--------------------------
+We can run kubectl create deployment set of commands to create a deployment from CLI.
+
+#Create a deployment
+> kubectl create deployment my-dep --image=nginx 
+
+#deployment with 3 replicas 
+> kubectl create deployment my-dep --image=nginx --replicas 3 
+
+#dry run to get yaml output
+> kubectl create deployment my-dep --image=nginx --dry-run=client -o yaml
+
+> kubectl create deployment my-dep --image=nginx --replicas 3 --dry-run=client -o yaml
+
+> kubectl create deployment --help
+
+4 important Pointers for deployments
+------------------------------------
+1. To know on how to set a new image to deployment as part of rolling update 
+> kubectl set image deployment/nginx-deployment nginx-nginx:191 --record 
+
+2. To know importance of --record instruction( record the change which took place)
+> kubectl set image deployment/nginx-deployment nginx-nginx:191 --record 
+
+3. To know how to rollback a Deployment
+> kubeectl rollout undo deployment nginx
+
+> kubectl deployment nginx -o yaml 
+
+4. You should be able to scale the deployment 
+> kubectl deployment nginx --replicas 5 
+
+Generating Deployment Manifests via CLI
+---------------------------------------
+> kubectl create deployment nginx-deploy --image=nginx --dry-run=client -o yaml
+
+Understanding Daemonsets
+------------------------
+Use-case
+--------
+*Lets say that we have 3 nodes and we want to run a single copy of pod in every node 
+Lets say an antivirus needs to run by default on all the nodes which joins the cluster. In this case
+we could make use of Daemonsets 
+
+* A Daemonsets can ensures that all Node run a copy of a Pod.
+
+* As nodes are added to the cluster, Pods are added to them
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promethium-daemonset
+spec:
+  selector:
+    matchLabels:
+      name: promethium-run-all-pod
+  template:
+    metadata:
+      labels:
+        name: promethium-run-all-pod
+    spec:
+      containers:
+      - name: promethium-pod
+        image: nginx
+
+> kubectl apply -f Daemonsets.yaml 
+
+#get all pods and where its launched 
+> kubectl get pods -o wide
+
+> kubectl get daemonset
+
+> kubectl describe daemonset promethium-daemonset
+
+Overview of NodeSelector
+------------------------
+> kubectl get nodes
+
+#label node
+> kubectl label node minikube disk=hdd
+
+Understanding Node Affinity
+---------------------------
+* For multiple reasons, there can be a need to run a pod on a specific worker node 
+* There can be multiple reasons, node hardware being the common one 
+* Node affinity is a set of rules used by the scheduler to determine where a pod can be placed
+* In kubernetes term, it is referred as nodeSelector, and nodeAffinity/podAffinity fields under PodSpec
+
+In kubernetes, we can achieve nodeAffinity with the help of:
+- nodeSelector
+- nodeAffinity(more flexibilty)
+
+* Node affinity is conceptually similar to nodeSelector - it allows you to constrain which node you pod is 
+eligible to be scheduled on, based on labels on the node.
+
+                    Types                           Description
+                    -----                           -----------
+reqiredDuringSchedulingIgnoredDuringExecution       Hard Preference   (all constraints must match in order to place in a node)   
+preferredDuringSchedulingIgnoredDuringExecution     Soft Preference   (all constraints may not be required to match to place in a node)
+
+
+Understanding Request and Limits 
+--------------------------------
+* If you schedule a large application in a node which has limited resource, then it will soon lead to OOM or others and will 
+lead to downtime
+
+* Request and Limits are 2 ways in which we can control the amount of resource that can be assigned to a pod(resource like CPU 
+and Memory)
+
+- Requests: Guaranteed to get 
+- Limits: Makes sure that container doesnot take node resources above a specific value 
+
+* Kubernetes Scheduler decides the ideal node to run the pod depending on the requests and limits
+
+* If your POD requires 8GB RAM, however there are no nodes within your cluster which has 8GB RAM, then your pod will
+never get scheduled.
+
+YAML file 
+---------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: promethium-pod
+spec:
+  containers:
+  - name: promethium-container
+    image: nginx
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "0.5"
+      limits:
+        memory: "128Mi"
+        cpu: "1"
+
+> kubectl apply -f request-limit.yaml
+
+> kubectl get pods -o wide
+
+> kubectl describe node minikube
+
+Static Pods
+-----------
+* We know scheduler is responsible for scheduling a pod on a given worker node 
+* Once node is decided by scheduler, the API server communicates with the kubelet and kubelet in-turn takes care of 
+running the pod
+* You can directly inform the kubelet that it needs to run a specific pod
+* There are multiple ways in which you can tell kubelet to run a pod
+* Pod created directly without schedulers are also referred as Static Pods.
+
+Taints and Tolerations
+----------------------
+* Taints are used to repel the pods from a specific nodes
+* In order to enter the taint worker node, you need a special pass 
+* This pass is called Toleration
+
+> kubectl taint nodes minikube key=value:NoSchedule
+
+#check taint key value
+> kubectl describe node minikube 
+
+#YAML present in Tolerations folder
+> kubectl apply -f toleration.yaml 
+
+* A taint allows a node to refuse pod to be scheduled unless hat pod has a matching tolertions
+
+* We can apply toleration to pod within the PodSpec
+
+Components of Taints and Tolerations
+------------------------------------
+    Parameter             Description
+    ---------             -----------
+    key                   A keey is any string upto 253 characters
+    value                 The value is any string uptp 63 characters
+    effect                NoSchedule
+                          PreferNoSchedule  
+                          NoExecute 
+    operator              Equal 
+                          Exist 
+        
+> kubectl taint node kubeadm-worker-01 key=value:NoSchedule
+
+NoSchedule: New pods that do not match the taint are not scheduled onto that node.
+          Existing pods on the node remain
+
+PreferNoSchedule: New pods that do not match the taint might be scheduled onto that node, 
+                  but the scheduler tries not to
+  
+NoExecute: New pods that do not match the taint cannot be scheduled onto that node, Existing pods on the node
+          Existing pods on the on the node that do not have a matching toleration are removed 
+
+Equal
+-----
+The key/value/effect parameters must match. This is the default 
+
+Exists 
+------
+The key/effect parameters must match. You must leave a blank value parameter, which matched any
+
+Multicontainer POD patterns
+---------------------------
+* Sidecar pattern is nothing but multiple container as part of a pod in a single node 
+
+* In below diagram we see that there is a web-server container which servers files from volumes and a separate 
+sidecar container "file puller" which Fetches and updates those files 
+
+Ambassador pattern
+------------------
+* Ambassador pattern is a type of sidecar pattern where the second container is primarily used to proxy the requests.
+
+Adapter pattern
+---------------
+* Adapter pattern is generally used to transform the applicatioon output to standardize/ normalize it for aggregation
+
+While your logging application, you want to have a common standard format
+
+[PHP|JAVA] [DATE] [HOST] [DURATION]
+
+With Adapter Container, you can transform your logs to standardize it
+
+Since containers in PODS can share volumes, adapter container can easily access App logs.
+
+Overview of K8s Services
+------------------------
+* Kubernetes services can act as an abstraction which can provide a single IP address and DNS through which pods can 
+be accessed.
+* This layer of abstraction allows us to perform lot of operations like load balancing, scaling of pods and others.
+
+* There are several types of Kubernetes Services which are available:
+- NodePort
+- ClusterIP
+- LoadBalancer
+- ExternalName
+
+Creating Service and Endpoints
+------------------------------
+Service and Endpoint
+--------------------
+* Service is a gateway that distributes the incoming traffic between its endpoints.
+* Endpoints are the underlying PODS to which the traffic will be routed to.
+
+#Step 1: Run 2 backend pods
+---------------------------
+> kubectl run backend-pod-1 --image=nginx
+> kubectl run backend-pod-2 --image=nginx
+
+#Step 2: Create Frontend pods 
+-----------------------------
+> kubectl run frontend-pod --image=ubuntu --command -- sleep 3600
+
+#Step 3: Test connection between frontend and backend pod 
+---------------------------------------------------------
+> kubectl get pods -o wide
+
+> kubectl exec -it frontend-pod -- bash
+  - apt-get update && apt-get -y install curl
+  
+  #curl backend pod 1
+  - curl 10.244.0.3
+
+#Step 4: Create a new service 
+-----------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: promethium-service
+spec:
+  ports:
+      port: 8080
+      targetPort: 80
+
+> kubectl apply -f service.yaml 
+
+> kubectl get service 
+
+#currently it doesnot have any endpoints
+> kubectl describe service promethium-service
+
+#Step 5: create endpoints
+-------------------------
+apiVersion: v1
+kind: Endpoints 
+metadata: 
+  name: promethium-service
+subsets:
+  - addresses:
+    - ip: 10.244.0.3
+    ports:
+      - port: 80
+
+# we will get the output of backend pod 1 nginx 
+> kubectl exec -it frontend-pod -- bash
+  - curl 10.102.100.133:8080
+
+> kubectl delete service promethium-service
+
+> kubectl delete endpoints promethium-service 
+
+> kubectl delete pod backend-pod-1
+
+> kubectl delete pod backend-pod-2
+
+> kubectl delete pod frontend-pod
+
+ServiceType: ClusterIP
+----------------------
+* Whenever service type is clusterIP, an internal cluster IP address is assigned to the service.
+
+* Since an internal cluster IP is assigned, it can only be reachable from within the cluster
+
+* This is a default Service Type
+
+Using selectors in Service
+--------------------------
+* At this stage, we are manually defining the IP address of the PODS in Endpoints
+
+* If there are 500 PODS, we will have to manually define each IP in endpoint 
+
+* Kubernetes allows us to define the list of labels of PODS that neds to be added as part of Endpoints
+
+* All PODS that matches that label will be added
+
+#Step 1: create deployment
+--------------------------
+Deployment.yaml
+---------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promethium-deployment
+spec:
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx 
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.15
+        ports:
+        - containerPort: 80
+
+#Step 2: create service 
+-----------------------
+Service.yaml
+------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: promethium-service
+spec:
+  selector:
+    app: nginx 
+  
+  ports:
+  - port: 8080
+    targetPort: 80
+
+> kubectl apply -f Deployment.yaml
+
+> kubectl get pods --show-labels
+
+#Step 3: Verify endpoints
+-------------------------
+> kubectl describe service promethium-service
+
+#Test scale deployment
+----------------------
+> kubectl scale deployment/promethium-deployment --replicas=10
+
+> kubectl get pods --show-labels
+
+#10 scaled pod ips has automatically been added as endpoint in service
+> kubectl describe service promethium-service
+
+#Step 4: Create a manual POD and Add a label
+--------------------------------------------
+> kubectl run manual-pod --image=nginx
+
+#add label
+> kubectl label pods manual-pod app=nginx
+
+#ServiceType: NodePort
+----------------------
+* NodePort exposes the Service on each Nodes IP at a static port(NodePort)
+* You will be able to contact the NodePort Service, from outside the cluster, by requesting <WorkerIP>:<NodePort>
+* If servicetype is NodePort, then kubernetes will allocate a port(default: 30000-32767) on every worker node
+
+#Step 1 : create a sample POD with label
+----------------------------------------
+> kubectl run nodeport-pod --labels='type-publicpod' --image=nginx
+
+> kubectl get pods --show-labels
+
+#Step 2: a NodePort Service
+---------------------------
+> kubectl get nodes -o wide
+
+ServiceType - LoadBalancer
+--------------------------
+* Challenge in nodeport: We need to access it via IP/DNS:Port 
+
+* Example: google.com:31514
+
+*LoadBalancer Service Type will automatically deploy an external load balancer 
+
+* This load balancer takes care of routing requests to the underlying service
+
+
+Step 1: Create Sample POD with Label
+------------------------------------
+> kubectl run lb-pod --labels="type=loadbalanced" --image=nginx
+
+> kubectl get pods --show-labels
+
+Step 2: Create LoadBalancer service
+-----------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: promethium-loadbalancer
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    protocol: TCP
+  selector:
+    type: loadbalanced
+
+> kubectl apply -f service-loadbalancer.yaml
+
+#Generating Service MAnifest - CLI
+----------------------------------
+> kubectl expose --help 
+
+#This will create a manifest fole for service and add POD in its endpoints 
+> kubectl expose pod nginx --name nginx-svc --port=80 --target-port=80 --dry-run=client -o yaml
+
+#Create a manifest of type NodePort and add POD as part of its endpoint
+> kubectl expose pod nginx --name nginx-svc --port=80 --target-port=80 --dry-run=client -o yaml --type=NodePort
+
+Service deployment manifest
+---------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: promethium-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        tier: frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+
+> kubectl apply -f service-deployment-manifest.yaml
+
+> kubectl get pods --show-labels
+
+> kubectl expose pod nginx --name nginx-service --port=80 --target-port=80 --dry-run=client -o yaml > service01.yaml
+
+> kubectl apply -f service01.yaml 
+
+#check endpoints that has been added
+> kubectl describe service nginx-service
+
+> kubectl expose pod nginx --name nginx-nodeport-service --port=80 --target-port=80 --type=NodePort --dry-run=client -o yaml
+
+#expose a Deployment
+> kubectl get deployments
+
+> kubectl expose deployment promethium-deployment --name=nginx-deploymekubent-service --port=80 --target-port=80 --dry-run=client -o yaml
+
+> kubectl expose deployment promethium-deployment --name=nginx-deployment-service --port=80 --target-port=80 
+
+> kubectl describe service nginx-deployment-service
+
+Overview of Ingress
+-------------------
+* Challenge with Typical loadbalancer Service is whenever making use of LoadBalancer Service Type, out of box, you can make
+use of single website
+
+* Kubernetes ingress is a collection of routing rules which governs how external users access the services running within the
+kubernetes within the Kubernetes cluster.
+
+* Ingress provides various features which includes:
+- Load Balancing 
+- SSL Termination
+- Named-based virtual hosting 
+ 
+* There are 2 sub-components of Ingress:
+  - Ingress resource
+  - Ingress Controllers
+
+* Ingress Resource contains set of routing rules based on which traggic is routed to a service.
+
+* Ingress COntroller takes care of the Layer 7 proxy to implement ingress rules.
+
+* You must have an ingress controller to satisfy an Ingress. Only creating an Ingress resource has no effect
+
+Helm
+----
+* Helm is one of the package manager for kubernetes
+
+* A Chart is a Helm package
+
+* It contains all of the resource definitions necessary to run an application, tool, or service inside of a Kubernetes 
+cluster.
+
+* A Repository is the place where chats can be collected and shared 
+
+* Kubernetes application can contain lot of objects like: Deployments, Secret, LoadBalancers, Volumes, services, ingress 
+and others
+
+* Helm is like Azure blueprint/chart. You can deploy the chart which contains all of the objects to multiples clusters rather
+than doing manually
+
+Kubernetes Namespaces
+---------------------
+* Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called 
+namespaces.
+
+Example use-case:
+-----------------
+You provide all the users within Team A full access on "Pods" resources [only for Team A Namespace]
+You provide all the users within Team A full access on "deployment" resources [only for Team B Namespace]
+
+> kubectl get namespace
+
+> kubectl get pods --namespace kube-system
+
+> kubectl create namespace teama
+
+> kubectl get namespace
+
+List of Namespaces
+------------------
+* default: the default namespace for objects with no other namespace
+* kube-system: the namespace for objects created by the kubernetes system
+* kube-public: This namespace is created automatically and is readable by all users. It contains information, like CA, that 
+ helps kubeadm join and authenticate worker nodes.
+* kube-node-release: The kube-node-namespace contans lease objects that are used by kubectl to determine node health.
+
+Service account
+---------------
+k8s cluster have 2 categories of users:
+- Normal User 
+- Service Accounts 
+
+* Service Accounts allows the Pods to communicate with the API server
+
+* Lets understand with a use-case:
+
+* Application within Pod A wants to retrieve an object within your k8s cluster
+
+* SA are namespaces
+
+* Default SA gets automatically created when you create a namespace
+
+* PODs are automatically mounted with the default SA 
+
+> kubectl get serviceaccount
+
+> kubectl create namespace promethium
+
+> kubectl get serviceaccount -n promethium
+
+Named Port
+----------
+* We can also associate a name associated with the port
+* This name must be unique within the pod 
+
+* Instead of Port Number, we can also specify the name while creating service 
+
+> kubectl expose pod nginx2 --port=80 --target-port=http --type=NodePort --name "promethium-svc"
+
+> kubectl describe svc promethium-svc
